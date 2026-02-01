@@ -8,10 +8,11 @@ interface VideoPlayerProps {
   isAdmin?: boolean;
 }
 
-export function VideoPlayer({ streamUrl, webinarStart, isAdmin = false }: VideoPlayerProps) {
+export function VideoPlayer({ streamUrl, webinarStart: webinarStartProp, isAdmin = false }: VideoPlayerProps) {
   const embedUrl = streamUrl || process.env.NEXT_PUBLIC_CF_STREAM_EMBED_URL;
   const [now, setNow] = useState(new Date());
   const [isLive, setIsLive] = useState(false);
+  const [webinarStart, setWebinarStart] = useState<string | null>(webinarStartProp || null);
 
   // Update time every second for countdown
   useEffect(() => {
@@ -21,24 +22,34 @@ export function VideoPlayer({ streamUrl, webinarStart, isAdmin = false }: VideoP
     return () => clearInterval(timer);
   }, []);
 
-  // Check if stream is live (polling)
+  // Check if stream is live and get webinarStart (polling)
   useEffect(() => {
-    const checkLive = async () => {
+    const checkSettings = async () => {
       try {
         const response = await fetch('/api/admin/settings');
         if (response.ok) {
           const data = await response.json();
           setIsLive(data.isLive === true);
+          if (data.webinarStart) {
+            setWebinarStart(data.webinarStart);
+          }
         }
       } catch (error) {
-        console.error('Failed to check live status:', error);
+        console.error('Failed to check settings:', error);
       }
     };
 
-    checkLive();
-    const interval = setInterval(checkLive, 5000); // Check every 5 seconds
+    checkSettings();
+    const interval = setInterval(checkSettings, 5000); // Check every 5 seconds
     return () => clearInterval(interval);
   }, []);
+
+  // Update from prop if it changes
+  useEffect(() => {
+    if (webinarStartProp) {
+      setWebinarStart(webinarStartProp);
+    }
+  }, [webinarStartProp]);
 
   // Parse webinar start time
   const startTime = webinarStart ? new Date(webinarStart) : null;
