@@ -32,11 +32,11 @@ export function VideoPlayer({ streamUrl, webinarStart: webinarStartProp, isAdmin
           const data = await response.json();
           setIsLive(data.isLive === true);
           setWebinarStart(data.webinarStart || null);
-          setSettingsLoaded(true);
         }
       } catch (error) {
         console.error('Failed to check settings:', error);
-        setSettingsLoaded(true); // Still mark as loaded to prevent infinite loading
+      } finally {
+        setSettingsLoaded(true); // Always mark as loaded
       }
     };
 
