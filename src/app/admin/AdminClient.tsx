@@ -22,8 +22,8 @@ const SLOW_MODE_OPTIONS = [
 export function AdminClient({ userEmail }: AdminClientProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [slowModeSeconds, setSlowModeSeconds] = useState(10);
-  const [isLive, setIsLive] = useState(false);
-  const [webinarStart, setWebinarStart] = useState<string | null>(null);
+  const [chatEnabled, setChatEnabled] = useState(false);
+  const [welcomeMessage, setWelcomeMessage] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -35,8 +35,8 @@ export function AdminClient({ userEmail }: AdminClientProps) {
         if (response.ok) {
           const data = await response.json();
           setSlowModeSeconds(data.slowModeSeconds ?? 10);
-          setIsLive(data.isLive ?? false);
-          setWebinarStart(data.webinarStart ?? null);
+          setChatEnabled(data.chatEnabled ?? false);
+          setWelcomeMessage(data.welcomeMessage ?? '');
         }
       } catch (error) {
         console.error('Failed to fetch settings:', error);
@@ -56,8 +56,8 @@ export function AdminClient({ userEmail }: AdminClientProps) {
       if (response.ok) {
         const data = await response.json();
         if (data.slowModeSeconds !== undefined) setSlowModeSeconds(data.slowModeSeconds);
-        if (data.isLive !== undefined) setIsLive(data.isLive);
-        if (data.webinarStart !== undefined) setWebinarStart(data.webinarStart);
+        if (data.chatEnabled !== undefined) setChatEnabled(data.chatEnabled);
+        if (data.welcomeMessage !== undefined) setWelcomeMessage(data.welcomeMessage || '');
       }
     } catch (error) {
       console.error('Failed to update settings:', error);
@@ -66,26 +66,13 @@ export function AdminClient({ userEmail }: AdminClientProps) {
     }
   };
 
-  const handleGoLive = () => {
-    updateSettings({ isLive: true });
-  };
-
-  const handleStopLive = () => {
-    if (confirm('Czy na pewno chcesz zakończyć transmisję? Widzowie stracą dostęp do streamu.')) {
-      updateSettings({ isLive: false });
-    }
+  const handleToggleChat = () => {
+    updateSettings({ chatEnabled: !chatEnabled });
   };
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/';
-  };
-
-  // Format date for datetime-local input
-  const formatDateForInput = (isoString: string | null) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    return date.toISOString().slice(0, 16);
   };
 
   return (
@@ -104,10 +91,10 @@ export function AdminClient({ userEmail }: AdminClientProps) {
           <ViewerCount className="text-black" />
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Live Toggle Button */}
-          {isLive ? (
+          {/* Chat Toggle Button */}
+          {chatEnabled ? (
             <button
-              onClick={handleStopLive}
+              onClick={handleToggleChat}
               disabled={isUpdating}
               className="px-3 py-1.5 text-xs sm:text-sm bg-[#c45c3e] hover:bg-[#a84d33] text-white rounded-md transition-colors disabled:opacity-50 flex items-center gap-2"
             >
@@ -115,15 +102,15 @@ export function AdminClient({ userEmail }: AdminClientProps) {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
               </span>
-              NA ŻYWO
+              Czat włączony
             </button>
           ) : (
             <button
-              onClick={handleGoLive}
+              onClick={handleToggleChat}
               disabled={isUpdating}
               className="px-3 py-1.5 text-xs sm:text-sm bg-[#285943] hover:bg-[#1e4633] text-white rounded-md transition-colors disabled:opacity-50"
             >
-              Uruchom stream
+              Włącz czat
             </button>
           )}
 
@@ -171,18 +158,18 @@ export function AdminClient({ userEmail }: AdminClientProps) {
       {/* Settings Panel */}
       {showSettings && (
         <div className="flex-shrink-0 px-4 py-4 bg-white border-b border-[#d4d2cd]">
-          <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Webinar Start Time */}
+          <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Welcome Message */}
             <div>
-              <label className="block text-xs text-[#6b6b6b] mb-1">Data startu webinaru</label>
+              <label className="block text-xs text-[#6b6b6b] mb-1">
+                Komunikat powitalny (gdy czat wyłączony)
+              </label>
               <input
-                type="datetime-local"
-                value={formatDateForInput(webinarStart)}
-                onChange={(e) => {
-                  const value = e.target.value ? new Date(e.target.value).toISOString() : null;
-                  setWebinarStart(value);
-                  updateSettings({ webinarStart: value });
-                }}
+                type="text"
+                value={welcomeMessage}
+                onChange={(e) => setWelcomeMessage(e.target.value)}
+                onBlur={() => updateSettings({ welcomeMessage: welcomeMessage || null })}
+                placeholder="np. Stream rozpocznie się 16 lutego o 18:00"
                 className="w-full px-2 py-1.5 text-sm bg-white border border-[#d4d2cd] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#285943]"
               />
             </div>
@@ -203,23 +190,15 @@ export function AdminClient({ userEmail }: AdminClientProps) {
                 ))}
               </select>
             </div>
-
-            {/* Status info */}
-            <div>
-              <label className="block text-xs text-[#6b6b6b] mb-1">Status streamu</label>
-              <div className={`px-3 py-1.5 rounded text-sm font-medium ${isLive ? 'bg-[#c45c3e]/10 text-[#c45c3e]' : 'bg-[#6b6b6b]/10 text-[#6b6b6b]'}`}>
-                {isLive ? '● Na żywo' : '○ Offline'}
-              </div>
-            </div>
           </div>
         </div>
       )}
 
       {/* Main Content */}
       <div className="flex-1 flex min-h-0 relative">
-        {/* Video Player - admin always sees it */}
+        {/* Video Player */}
         <main className={`flex-1 min-w-0 ${isChatOpen ? 'hidden lg:block' : 'block'}`}>
-          <VideoPlayer isAdmin={true} webinarStart={webinarStart} />
+          <VideoPlayer />
         </main>
 
         {/* Chat Sidebar with Admin Controls - full screen on mobile when open */}

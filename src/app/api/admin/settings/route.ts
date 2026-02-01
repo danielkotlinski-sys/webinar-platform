@@ -6,14 +6,14 @@ const SETTINGS_KEY = 'webinar_settings';
 
 interface WebinarSettings {
   slowModeSeconds: number;
-  isLive: boolean;
-  webinarStart: string | null; // ISO date string
+  chatEnabled: boolean;
+  welcomeMessage: string | null; // Message shown before chat is enabled
 }
 
 const DEFAULT_SETTINGS: WebinarSettings = {
   slowModeSeconds: 10,
-  isLive: false,
-  webinarStart: null,
+  chatEnabled: false,
+  welcomeMessage: null,
 };
 
 export async function GET() {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { slowModeSeconds, isLive, webinarStart } = body as Partial<WebinarSettings>;
+    const { slowModeSeconds } = body as Partial<WebinarSettings>;
 
     const supabase = createServerSupabaseClient();
 
@@ -73,10 +73,11 @@ export async function POST(request: NextRequest) {
     const currentSettings = currentData?.value || DEFAULT_SETTINGS;
 
     // Merge with new settings
+    const { chatEnabled, welcomeMessage } = body as Partial<WebinarSettings>;
     const newSettings: WebinarSettings = {
       slowModeSeconds: slowModeSeconds ?? currentSettings.slowModeSeconds ?? DEFAULT_SETTINGS.slowModeSeconds,
-      isLive: isLive ?? currentSettings.isLive ?? DEFAULT_SETTINGS.isLive,
-      webinarStart: webinarStart !== undefined ? webinarStart : (currentSettings.webinarStart ?? DEFAULT_SETTINGS.webinarStart),
+      chatEnabled: chatEnabled ?? currentSettings.chatEnabled ?? DEFAULT_SETTINGS.chatEnabled,
+      welcomeMessage: welcomeMessage !== undefined ? welcomeMessage : (currentSettings.welcomeMessage ?? DEFAULT_SETTINGS.welcomeMessage),
     };
 
     // Validate slowModeSeconds
