@@ -28,7 +28,10 @@ export async function verifyToken(token: string): Promise<SessionPayload | null>
   try {
     const secret = getJwtSecret();
     const { payload } = await jwtVerify(token, secret);
-    return payload as SessionPayload;
+    if (typeof payload.email === 'string') {
+      return { email: payload.email, iat: payload.iat, exp: payload.exp };
+    }
+    return null;
   } catch {
     return null;
   }
