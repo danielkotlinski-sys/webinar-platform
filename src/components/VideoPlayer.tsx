@@ -13,6 +13,7 @@ export function VideoPlayer({ streamUrl, webinarStart: webinarStartProp, isAdmin
   const [now, setNow] = useState(new Date());
   const [isLive, setIsLive] = useState(false);
   const [webinarStart, setWebinarStart] = useState<string | null>(webinarStartProp || null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Update time every second for countdown
   useEffect(() => {
@@ -30,12 +31,12 @@ export function VideoPlayer({ streamUrl, webinarStart: webinarStartProp, isAdmin
         if (response.ok) {
           const data = await response.json();
           setIsLive(data.isLive === true);
-          if (data.webinarStart) {
-            setWebinarStart(data.webinarStart);
-          }
+          setWebinarStart(data.webinarStart || null);
+          setSettingsLoaded(true);
         }
       } catch (error) {
         console.error('Failed to check settings:', error);
+        setSettingsLoaded(true); // Still mark as loaded to prevent infinite loading
       }
     };
 
@@ -46,7 +47,7 @@ export function VideoPlayer({ streamUrl, webinarStart: webinarStartProp, isAdmin
 
   // Update from prop if it changes
   useEffect(() => {
-    if (webinarStartProp) {
+    if (webinarStartProp !== undefined) {
       setWebinarStart(webinarStartProp);
     }
   }, [webinarStartProp]);
@@ -55,7 +56,19 @@ export function VideoPlayer({ streamUrl, webinarStart: webinarStartProp, isAdmin
   const startTime = webinarStart ? new Date(webinarStart) : null;
   const hasStarted = startTime ? now >= startTime : true;
 
-  // Show waiting room if not started and not live (unless admin)
+  // Show loading state while fetching settings (only for non-admin)
+  if (!isAdmin && !settingsLoaded) {
+    return (
+      <div className="relative w-full h-full bg-[#f5f4f2] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-[#285943] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#6b6b6b]">Ładowanie...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show waiting room with countdown if webinar hasn't started yet (unless admin)
   if (!isAdmin && !isLive && startTime && !hasStarted) {
     const diff = startTime.getTime() - now.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
