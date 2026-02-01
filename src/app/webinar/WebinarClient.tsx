@@ -18,7 +18,7 @@ export function WebinarClient({ userEmail }: WebinarClientProps) {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await fetch('/api/admin/settings');
+        const response = await fetch('/api/settings/public');
         if (response.ok) {
           const data = await response.json();
           setChatEnabled(data.chatEnabled === true);
