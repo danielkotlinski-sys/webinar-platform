@@ -91,7 +91,7 @@ export default function LoginPage() {
 
         {/* Login form */}
         <div className="max-w-md mx-auto">
-          <p className="text-center text-[#6b6b6b] mb-6">
+          <p className="text-center text-[#6b6b6b] mb-6 font-semibold">
             Wpisz email, na który została wysłana rejestracja.
           </p>
 
